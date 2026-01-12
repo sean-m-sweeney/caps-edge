@@ -83,31 +83,50 @@ def fetch_traditional_stats(client: NHLClient, player_ids: list) -> dict:
     logger.info("Fetching traditional stats...")
     season = get_current_season()
 
-    # Build query for summary stats
-    filters = [
-        SeasonQuery(season_start=season, season_end=season),
-        GameTypeQuery(game_type="2"),  # Regular season
-    ]
-
-    qb = QueryBuilder()
-    query_ctx = qb.build(filters=filters)
-
     try:
-        # Get summary stats (goals, assists, points, etc.)
-        summary_result = client.stats.skater_stats_with_query_context(
-            query_context=query_ctx,
-            report_type="summary",
-            limit=1000
-        )
-        summary_data = {p["playerId"]: p for p in summary_result.get("data", [])}
+        # Paginate through all summary stats (API caps at 100 per request)
+        all_summary = []
+        for start in range(0, 1000, 100):
+            batch = client.stats.skater_stats_summary(
+                start_season=season,
+                end_season=season,
+                game_type_id=2,
+                limit=100,
+                start=start
+            )
+            if not batch:
+                break
+            all_summary.extend(batch)
+            logger.info(f"Fetched summary stats batch: {len(batch)} players (offset {start})")
 
-        # Get realtime stats (hits, blocks, etc.)
-        realtime_result = client.stats.skater_stats_with_query_context(
-            query_context=query_ctx,
-            report_type="realtime",
-            limit=1000
-        )
-        realtime_data = {p["playerId"]: p for p in realtime_result.get("data", [])}
+        summary_data = {p["playerId"]: p for p in all_summary}
+        logger.info(f"Total summary stats: {len(summary_data)} players")
+
+        # Paginate through realtime stats (hits, blocks, etc.)
+        # Use the query context method for realtime since skater_stats_summary doesn't have it
+        filters = [
+            SeasonQuery(season_start=season, season_end=season),
+            GameTypeQuery(game_type="2"),
+        ]
+        qb = QueryBuilder()
+        query_ctx = qb.build(filters=filters)
+
+        all_realtime = []
+        for start in range(0, 1000, 100):
+            result = client.stats.skater_stats_with_query_context(
+                query_context=query_ctx,
+                report_type="realtime",
+                limit=100,
+                start=start
+            )
+            batch = result.get("data", [])
+            if not batch:
+                break
+            all_realtime.extend(batch)
+
+        realtime_data = {p["playerId"]: p for p in all_realtime}
+        logger.info(f"Total realtime stats: {len(realtime_data)} players")
+
     except Exception as e:
         logger.error(f"Error fetching traditional stats: {e}")
         return {}
