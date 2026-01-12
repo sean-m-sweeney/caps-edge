@@ -406,17 +406,25 @@ def refresh_data():
 
     logger.info(f"Collected Edge stats for {len(edge_stats)} players")
 
-    # 7. Collect shots/60 values for percentile calculation
+    # 7. Collect values for percentile calculation
     all_shots_per_60 = []
+    all_distance_per_game = []
     for player in all_skaters:
         player_id = player["player_id"]
         if player_id in trad_stats:
             shots_per_60 = trad_stats[player_id].get("shots_per_60")
             if shots_per_60 is not None:
                 all_shots_per_60.append(shots_per_60)
+        if player_id in edge_stats:
+            dist_per_game = edge_stats[player_id].get("distance_per_game_miles")
+            if dist_per_game is not None:
+                all_distance_per_game.append(dist_per_game)
     all_shots_per_60.sort()
+    all_distance_per_game.sort()
 
-    # 8. Save Edge stats with shots percentile
+    logger.info(f"Shots/60 samples: {len(all_shots_per_60)}, Dist/G samples: {len(all_distance_per_game)}")
+
+    # 8. Save Edge stats with calculated percentiles
     players_updated = 0
     for player in all_skaters:
         player_id = player["player_id"]
@@ -429,6 +437,11 @@ def refresh_data():
             shots_per_60 = trad.get("shots_per_60")
             if shots_per_60 is not None and all_shots_per_60:
                 edge["shots_percentile"] = calculate_percentile(shots_per_60, all_shots_per_60)
+
+            # Calculate distance per game percentile (override NHL's total distance percentile)
+            dist_per_game = edge.get("distance_per_game_miles")
+            if dist_per_game is not None and all_distance_per_game:
+                edge["distance_percentile"] = calculate_percentile(dist_per_game, all_distance_per_game)
 
             database.upsert_player_edge_stats(player_id, edge)
             players_updated += 1
