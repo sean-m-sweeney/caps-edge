@@ -51,6 +51,64 @@
             <p class="text-red-400">Failed to load player data. Please try again later.</p>
         </div>
 
+        <!-- Info Section -->
+        <div id="info-section" class="hidden info-section">
+            <button class="info-toggle" id="info-toggle">How to read this data ▼</button>
+            <div class="info-content" id="info-content">
+                <div class="info-block">
+                    <h3>Understanding the Numbers</h3>
+                    <p>Each stat shows the raw value followed by a <span class="percentile-example">(percentile)</span> in parentheses. The percentile tells you how a player ranks league-wide among all NHL skaters with 10+ games played.</p>
+                    <ul>
+                        <li><strong>90th percentile</strong> = Top 10% in the league</li>
+                        <li><strong>50th percentile</strong> = League average</li>
+                        <li><strong>10th percentile</strong> = Bottom 10% in the league</li>
+                    </ul>
+                    <p>Cells are color-coded: <span class="green-example">green</span> for 75th percentile and above, <span class="red-example">red</span> for below 25th percentile.</p>
+                </div>
+
+                <div class="info-block">
+                    <h3>Motor Index</h3>
+                    <p>Motor Index measures a player's effort and activity level <em>relative to their position</em>. It answers the question: "Is this player working harder than others who play the same role?"</p>
+
+                    <p><strong>The formula combines five components:</strong></p>
+                    <ul>
+                        <li><strong>Speed Bursts (25%)</strong> — Explosive skating efforts over 20 mph per 60 minutes</li>
+                        <li><strong>Distance (20%)</strong> — Miles skated per game</li>
+                        <li><strong>Hits (20%)</strong> — Physical engagement per 60 minutes</li>
+                        <li><strong>Shots (20%)</strong> — Shot attempts per 60 minutes, measuring offensive aggression</li>
+                        <li><strong>O-Zone Time (15%)</strong> — Percentage of time spent in the offensive zone</li>
+                    </ul>
+
+                    <p>Each component is compared to the league average <em>for that player's position</em>. A center's hits are compared to other centers, not to defensemen or wingers.</p>
+
+                    <p><strong>How to interpret the score:</strong></p>
+                    <ul>
+                        <li><strong>60+</strong> — Elite motor. This player consistently outworks their peers.</li>
+                        <li><strong>50-59</strong> — Above average effort for their position.</li>
+                        <li><strong>40-49</strong> — Average. Doing what's expected for the role.</li>
+                        <li><strong>Below 40</strong> — Below average activity. May indicate a skill-over-effort player, limited ice time role, or declining compete level.</li>
+                    </ul>
+
+                    <p><em>Note: Motor Index measures activity and effort, not skill or effectiveness. A high motor doesn't guarantee points, and a low motor doesn't mean a player is bad — some elite players produce efficiently without high activity rates.</em></p>
+                </div>
+
+                <div class="info-block">
+                    <h3>NHL Edge Stats Glossary</h3>
+                    <ul>
+                        <li><strong>Top Speed</strong> — Fastest skating speed recorded this season (mph)</li>
+                        <li><strong>Bursts 20+</strong> — Number of times player exceeded 20 mph</li>
+                        <li><strong>Bursts 22+</strong> — Number of times player exceeded 22 mph (elite speed)</li>
+                        <li><strong>Dist/G</strong> — Average miles skated per game</li>
+                        <li><strong>O-Zone%</strong> — Percentage of 5v5 time spent in offensive zone</li>
+                        <li><strong>D-Zone%</strong> — Percentage of 5v5 time spent in defensive zone</li>
+                        <li><strong>ZS%</strong> — Offensive zone start percentage (higher = more o-zone faceoffs)</li>
+                        <li><strong>Shot Speed</strong> — Fastest shot recorded this season (mph)</li>
+                        <li><strong>Shots/60</strong> — Shot attempts per 60 minutes of ice time</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <!-- Stats Tables -->
         <div id="table-container" class="hidden space-y-8">
             <!-- Forwards Section -->
@@ -71,6 +129,7 @@
                                 <th class="table-header" data-sort="plus_minus" data-table="forwards">+/-</th>
                                 <th class="table-header" data-sort="hits" data-table="forwards">Hits</th>
                                 <th class="table-header" data-sort="pim" data-table="forwards">PIM</th>
+                                <th class="table-header" data-sort="shots_per_60" data-table="forwards">Shots/60</th>
                                 <th class="table-header" data-sort="faceoff_win_pct" data-table="forwards">FO%</th>
                                 <th class="table-header edge-header" data-sort="top_speed_mph" data-table="forwards">Top Speed</th>
                                 <th class="table-header edge-header" data-sort="bursts_20_plus" data-table="forwards">Bursts 20+</th>
@@ -80,7 +139,7 @@
                                 <th class="table-header edge-header" data-sort="def_zone_time_pct" data-table="forwards">D-Zone%</th>
                                 <th class="table-header edge-header" data-sort="zone_starts_off_pct" data-table="forwards">ZS%</th>
                                 <th class="table-header edge-header" data-sort="top_shot_speed_mph" data-table="forwards">Shot Speed</th>
-                                <th class="table-header edge-header" data-sort="hustle_score" data-table="forwards">Hustle</th>
+                                <th class="table-header edge-header" data-sort="motor_index" data-table="forwards">Motor</th>
                             </tr>
                         </thead>
                         <tbody id="forwards-body">
@@ -108,6 +167,7 @@
                                 <th class="table-header" data-sort="plus_minus" data-table="defensemen">+/-</th>
                                 <th class="table-header" data-sort="hits" data-table="defensemen">Hits</th>
                                 <th class="table-header" data-sort="pim" data-table="defensemen">PIM</th>
+                                <th class="table-header" data-sort="shots_per_60" data-table="defensemen">Shots/60</th>
                                 <th class="table-header" data-sort="faceoff_win_pct" data-table="defensemen">FO%</th>
                                 <th class="table-header edge-header" data-sort="top_speed_mph" data-table="defensemen">Top Speed</th>
                                 <th class="table-header edge-header" data-sort="bursts_20_plus" data-table="defensemen">Bursts 20+</th>
@@ -117,7 +177,7 @@
                                 <th class="table-header edge-header" data-sort="def_zone_time_pct" data-table="defensemen">D-Zone%</th>
                                 <th class="table-header edge-header" data-sort="zone_starts_off_pct" data-table="defensemen">ZS%</th>
                                 <th class="table-header edge-header" data-sort="top_shot_speed_mph" data-table="defensemen">Shot Speed</th>
-                                <th class="table-header edge-header" data-sort="hustle_score" data-table="defensemen">Hustle</th>
+                                <th class="table-header edge-header" data-sort="motor_index" data-table="defensemen">Motor</th>
                             </tr>
                         </thead>
                         <tbody id="defensemen-body">
@@ -146,7 +206,7 @@
                 </div>
             </div>
             <p class="text-xs text-gray-500 mt-2">
-                Hustle Score = Bursts/60 (30%) + Distance/G (25%) + Hits/60 (25%) + O-Zone% (20%)
+                Motor Index = Bursts/60 (25%) + Distance/G (20%) + Hits/60 (20%) + Shots/60 (20%) + O-Zone% (15%) — compared to position average
             </p>
         </div>
     </main>

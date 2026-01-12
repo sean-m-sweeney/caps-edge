@@ -16,6 +16,8 @@ class PlayerStats(BaseModel):
     hits: Optional[int] = None
     pim: Optional[int] = None
     faceoff_win_pct: Optional[float] = None
+    shots: Optional[int] = None
+    shots_per_60: Optional[float] = None
 
 
 class PlayerEdgeStats(BaseModel):
@@ -49,9 +51,12 @@ class PlayerEdgeStats(BaseModel):
     top_shot_speed_mph: Optional[float] = None
     shot_speed_percentile: Optional[int] = None
 
-    # Calculated
-    hustle_score: Optional[float] = None
-    hustle_percentile: Optional[int] = None
+    # Shots percentile (for shots/60)
+    shots_percentile: Optional[int] = None
+
+    # Motor Index (measures effort relative to position)
+    motor_index: Optional[float] = None
+    motor_percentile: Optional[int] = None
 
 
 class Player(BaseModel):

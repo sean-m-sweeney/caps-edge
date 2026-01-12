@@ -39,7 +39,9 @@ def db_row_to_player(row: dict) -> Player:
             plus_minus=row.get("plus_minus"),
             hits=row.get("hits"),
             pim=row.get("pim"),
-            faceoff_win_pct=round(row["faceoff_win_pct"] * 100, 1) if row.get("faceoff_win_pct") else None
+            faceoff_win_pct=round(row["faceoff_win_pct"] * 100, 1) if row.get("faceoff_win_pct") else None,
+            shots=row.get("shots"),
+            shots_per_60=round(row["shots_per_60"], 1) if row.get("shots_per_60") else None
         )
 
     edge_stats = None
@@ -62,8 +64,9 @@ def db_row_to_player(row: dict) -> Player:
             zone_starts_percentile=row.get("zone_starts_percentile"),
             top_shot_speed_mph=round(row["top_shot_speed_mph"], 1) if row.get("top_shot_speed_mph") else None,
             shot_speed_percentile=row.get("shot_speed_percentile"),
-            hustle_score=round(row["hustle_score"], 1) if row.get("hustle_score") else None,
-            hustle_percentile=row.get("hustle_percentile")
+            shots_percentile=row.get("shots_percentile"),
+            motor_index=round(row["motor_index"], 1) if row.get("motor_index") else None,
+            motor_percentile=row.get("motor_percentile")
         )
 
     return Player(

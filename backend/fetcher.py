@@ -9,7 +9,12 @@ from nhlpy.api.query.filters.game_type import GameTypeQuery
 from nhlpy.api.query.filters.season import SeasonQuery
 
 from backend import database
-from backend.hustle import calculate_hustle_score, calculate_league_maxes, calculate_percentile
+from backend.motor import (
+    calculate_motor_index,
+    calculate_position_averages,
+    calculate_percentile,
+    calculate_shots_percentile
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -148,7 +153,9 @@ def fetch_traditional_stats(client: NHLClient, player_ids: list) -> dict:
                 "plus_minus": 0,
                 "hits": 0,
                 "pim": 0,
-                "faceoff_win_pct": None
+                "faceoff_win_pct": None,
+                "shots": 0,
+                "shots_per_60": None
             }
             continue
 
@@ -156,8 +163,16 @@ def fetch_traditional_stats(client: NHLClient, player_ids: list) -> dict:
         toi_seconds = summary.get("timeOnIcePerGame", 0)
         avg_toi = toi_seconds / 60 if toi_seconds else None
 
+        # Calculate shots per 60
+        games_played = summary.get("gamesPlayed", 0)
+        shots = summary.get("shots", 0)
+        shots_per_60 = None
+        if games_played > 0 and avg_toi and avg_toi > 0:
+            minutes_played = games_played * avg_toi
+            shots_per_60 = round((shots / minutes_played) * 60, 2) if minutes_played > 0 else None
+
         stats[player_id] = {
-            "games_played": summary.get("gamesPlayed"),
+            "games_played": games_played,
             "avg_toi": avg_toi,
             "goals": summary.get("goals"),
             "assists": summary.get("assists"),
@@ -165,7 +180,9 @@ def fetch_traditional_stats(client: NHLClient, player_ids: list) -> dict:
             "plus_minus": summary.get("plusMinus"),
             "hits": realtime.get("hits"),
             "pim": summary.get("penaltyMinutes"),
-            "faceoff_win_pct": summary.get("faceoffWinPct")
+            "faceoff_win_pct": summary.get("faceoffWinPct"),
+            "shots": shots,
+            "shots_per_60": shots_per_60
         }
 
     logger.info(f"Got traditional stats for {len(stats)} players")
@@ -250,14 +267,14 @@ def fetch_edge_stats(client: NHLClient, player_id: int) -> Optional[dict]:
     }
 
 
-def fetch_league_stats_for_hustle(client: NHLClient) -> list:
+def fetch_league_stats_for_motor(client: NHLClient) -> list:
     """
-    Fetch league-wide stats needed for hustle score calculation.
+    Fetch league-wide stats needed for Motor Index calculation.
 
     Returns:
-        List of player dicts with stats needed for hustle calculation
+        List of player dicts with stats needed for Motor calculation
     """
-    logger.info("Fetching league-wide stats for hustle calculation...")
+    logger.info("Fetching league-wide stats for Motor Index calculation...")
     season = get_current_season()
 
     filters = [
@@ -269,20 +286,39 @@ def fetch_league_stats_for_hustle(client: NHLClient) -> list:
     query_ctx = qb.build(filters=filters)
 
     try:
-        # Get all skaters with minimum games
-        summary_result = client.stats.skater_stats_with_query_context(
-            query_context=query_ctx,
-            report_type="summary",
-            limit=1000
-        )
-        summary_data = {p["playerId"]: p for p in summary_result.get("data", [])}
+        # Get all skaters with summary stats (paginate)
+        all_summary = []
+        for start in range(0, 1000, 100):
+            result = client.stats.skater_stats_with_query_context(
+                query_context=query_ctx,
+                report_type="summary",
+                limit=100,
+                start=start
+            )
+            batch = result.get("data", [])
+            if not batch:
+                break
+            all_summary.extend(batch)
 
-        realtime_result = client.stats.skater_stats_with_query_context(
-            query_context=query_ctx,
-            report_type="realtime",
-            limit=1000
-        )
-        realtime_data = {p["playerId"]: p for p in realtime_result.get("data", [])}
+        summary_data = {p["playerId"]: p for p in all_summary}
+        logger.info(f"Fetched {len(summary_data)} players for Motor calculation")
+
+        # Get realtime stats (hits)
+        all_realtime = []
+        for start in range(0, 1000, 100):
+            result = client.stats.skater_stats_with_query_context(
+                query_context=query_ctx,
+                report_type="realtime",
+                limit=100,
+                start=start
+            )
+            batch = result.get("data", [])
+            if not batch:
+                break
+            all_realtime.extend(batch)
+
+        realtime_data = {p["playerId"]: p for p in all_realtime}
+
     except Exception as e:
         logger.error(f"Error fetching league stats: {e}")
         return []
@@ -300,9 +336,11 @@ def fetch_league_stats_for_hustle(client: NHLClient) -> list:
 
         players.append({
             "player_id": player_id,
+            "position": summary.get("positionCode"),
             "games_played": games_played,
             "avg_toi": avg_toi,
-            "hits": realtime.get("hits", 0)
+            "hits": realtime.get("hits", 0),
+            "shots": summary.get("shots", 0)
         })
 
     logger.info(f"Got league stats for {len(players)} qualified players")
@@ -347,16 +385,14 @@ def refresh_data():
             edge_stats[player_id] = stats
         logger.info(f"Fetched Edge stats for player {player_id}")
 
-    # 4. Get league-wide stats for hustle calculation
-    league_players = fetch_league_stats_for_hustle(client)
+    # 4. Get league-wide stats for Motor Index calculation
+    league_players = fetch_league_stats_for_motor(client)
 
-    # Add Edge data to league players (for those we can get)
-    # For hustle calculation, we need bursts and distance
-    # We'll sample some players for league maxes
-    logger.info("Fetching Edge stats for league hustle calculation...")
+    # 5. Fetch Edge stats for league players (sample for position averages)
+    logger.info("Fetching Edge stats for league Motor Index calculation...")
     league_with_edge = []
     sample_count = 0
-    max_samples = 100  # Sample 100 players for league maxes
+    max_samples = 150  # Sample 150 players for position averages
 
     for player in league_players:
         player_id = player["player_id"]
@@ -371,61 +407,91 @@ def refresh_data():
         else:
             break
 
-    # 5. Calculate league maxes
-    league_maxes = calculate_league_maxes(league_with_edge)
-    logger.info(f"League maxes: {league_maxes}")
+    logger.info(f"Collected Edge stats for {len(league_with_edge)} league players")
 
-    # 6. Calculate hustle scores for all league players and store
+    # 6. Calculate position averages
+    position_avgs = calculate_position_averages(league_with_edge)
+    logger.info(f"Position averages: {position_avgs}")
+
+    # Save position averages to database
+    database.clear_position_averages()
+    for position, avgs in position_avgs.items():
+        database.insert_position_averages(position, avgs)
+
+    # 7. Calculate Motor Index for all league players and store
     database.clear_league_stats()
-    all_hustle_scores = []
+    all_motor_scores = []
+    all_shots_per_60 = []
 
     for player in league_with_edge:
-        hustle = calculate_hustle_score(
-            games_played=player.get("games_played", 0),
-            avg_toi=player.get("avg_toi", 0),
-            hits=player.get("hits", 0),
-            bursts_20_plus=player.get("bursts_20_plus", 0),
-            distance_per_game=player.get("distance_per_game_miles", 0),
-            off_zone_time_pct=player.get("off_zone_time_pct", 0),
-            league_max_bursts_per_60=league_maxes["max_bursts_per_60"],
-            league_max_distance=league_maxes["max_distance"],
-            league_max_hits_per_60=league_maxes["max_hits_per_60"]
+        # Calculate shots_per_60 for this player
+        games_played = player.get("games_played", 0)
+        avg_toi = player.get("avg_toi", 0)
+        shots = player.get("shots", 0)
+
+        if games_played > 0 and avg_toi > 0:
+            minutes_played = games_played * avg_toi
+            shots_per_60 = (shots / minutes_played) * 60 if minutes_played > 0 else 0
+            all_shots_per_60.append(shots_per_60)
+        else:
+            shots_per_60 = 0
+
+        motor = calculate_motor_index(
+            position=player.get("position"),
+            games_played=games_played,
+            avg_toi=avg_toi,
+            bursts_20_plus=player.get("bursts_20_plus", 0) or 0,
+            distance_per_game=player.get("distance_per_game_miles", 0) or 0,
+            hits=player.get("hits", 0) or 0,
+            shots=shots,
+            off_zone_time_pct=player.get("off_zone_time_pct", 0) or 0,
+            position_avgs=position_avgs
         )
-        if hustle is not None:
-            player["hustle_score"] = hustle
-            all_hustle_scores.append(hustle)
+
+        if motor is not None:
+            player["motor_index"] = motor
+            all_motor_scores.append(motor)
             database.insert_league_stats(player["player_id"], player)
 
-    all_hustle_scores.sort()
+    all_motor_scores.sort()
+    logger.info(f"Calculated Motor Index for {len(all_motor_scores)} league players")
 
-    # 7. Save Caps player data with hustle scores and percentiles
+    # 8. Save Caps player data with Motor Index and percentiles
     players_updated = 0
     for player_id in player_ids:
+        # Get player info
+        player_info = next((p for p in roster if p["player_id"] == player_id), {})
+
         # Save traditional stats
         if player_id in trad_stats:
             database.upsert_player_stats(player_id, trad_stats[player_id])
 
-        # Calculate and save Edge stats with hustle
+        # Calculate and save Edge stats with Motor Index
         if player_id in edge_stats:
             edge = edge_stats[player_id]
             trad = trad_stats.get(player_id, {})
 
-            # Calculate hustle score for this player
-            hustle = calculate_hustle_score(
-                games_played=trad.get("games_played", 0),
-                avg_toi=trad.get("avg_toi", 0),
-                hits=trad.get("hits", 0),
-                bursts_20_plus=edge.get("bursts_20_plus", 0),
-                distance_per_game=edge.get("distance_per_game_miles", 0),
-                off_zone_time_pct=edge.get("off_zone_time_pct", 0),
-                league_max_bursts_per_60=league_maxes["max_bursts_per_60"],
-                league_max_distance=league_maxes["max_distance"],
-                league_max_hits_per_60=league_maxes["max_hits_per_60"]
+            # Calculate Motor Index for this player
+            motor = calculate_motor_index(
+                position=player_info.get("position"),
+                games_played=trad.get("games_played", 0) or 0,
+                avg_toi=trad.get("avg_toi", 0) or 0,
+                bursts_20_plus=edge.get("bursts_20_plus", 0) or 0,
+                distance_per_game=edge.get("distance_per_game_miles", 0) or 0,
+                hits=trad.get("hits", 0) or 0,
+                shots=trad.get("shots", 0) or 0,
+                off_zone_time_pct=edge.get("off_zone_time_pct", 0) or 0,
+                position_avgs=position_avgs
             )
 
-            if hustle is not None:
-                edge["hustle_score"] = hustle
-                edge["hustle_percentile"] = calculate_percentile(hustle, all_hustle_scores)
+            if motor is not None:
+                edge["motor_index"] = motor
+                edge["motor_percentile"] = calculate_percentile(motor, all_motor_scores)
+
+            # Calculate shots percentile
+            shots_per_60 = trad.get("shots_per_60")
+            if shots_per_60 is not None and all_shots_per_60:
+                edge["shots_percentile"] = calculate_shots_percentile(shots_per_60, all_shots_per_60)
 
             database.upsert_player_edge_stats(player_id, edge)
             players_updated += 1

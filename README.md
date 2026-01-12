@@ -10,7 +10,7 @@ Caps Edge displays NHL Edge tracking statistics for Washington Capitals players.
 
 ## Features
 
-- **Traditional Stats**: GP, TOI, G, A, P, +/-, Hits, PIM, FO%
+- **Traditional Stats**: GP, TOI, G, A, P, +/-, Hits, PIM, Shots/60, FO%
 - **Edge Stats with Percentiles**:
   - Top skating speed (mph)
   - Bursts over 20 mph and 22 mph
@@ -18,7 +18,7 @@ Caps Edge displays NHL Edge tracking statistics for Washington Capitals players.
   - Offensive/Defensive zone time percentages
   - Zone start percentage
   - Top shot speed (mph)
-  - Custom "Hustle Score"
+  - Motor Index (effort relative to position average)
 - **Interactive Table**: Click any column to sort
 - **Percentile Coloring**: Green for 75th+ percentile, red for below 25th
 - **Player Links**: Click any player name to view their Hockey-Reference page
@@ -105,22 +105,44 @@ Data is automatically refreshed 3 times daily via cron:
 
 You can also trigger a manual refresh using the API endpoint.
 
-## Hustle Score Methodology
+## Motor Index Methodology
 
-The Hustle Score is a custom composite metric that measures player effort and engagement. It combines:
+Motor Index measures player effort relative to position average. Unlike raw stats that favor certain positions, Motor Index compares each player only to others who play the same role.
 
-| Component | Weight | Description |
-|-----------|--------|-------------|
-| Bursts per 60 | 30% | High-speed skating bursts (20+ mph) normalized to 60 minutes |
-| Distance per game | 25% | Total miles skated per game |
-| Hits per 60 | 25% | Physical engagement normalized to 60 minutes |
-| O-Zone time % | 20% | Time spent in offensive zone |
+### Components
 
-**Calculation:**
-1. Calculate per-60-minute rates for bursts and hits
-2. Normalize each component against the league maximum
-3. Apply weights and sum to get a 0-100 score
-4. Calculate percentile against all NHL skaters with 10+ games
+| Stat | Weight | Rationale |
+|------|--------|-----------|
+| Speed Bursts/60 | 25% | Explosive effort, backchecking, attacking loose pucks |
+| Distance/Game | 20% | Total work output, can't fake skating miles |
+| Hits/60 | 20% | Physical engagement, finishing checks |
+| Shots/60 | 20% | Offensive aggression, creating chances |
+| O-Zone Time % | 15% | Sustained pressure, not floating in neutral zone |
+
+### Calculation
+
+Each component is calculated as a ratio to the player's position average:
+- A player exactly at average for all stats scores 50
+- Scoring above average increases the index
+- Scoring below average decreases it
+
+The final score typically ranges from 25-75, with elite effort players reaching 60+.
+
+### Interpreting Scores
+
+| Score | Meaning |
+|-------|---------|
+| 60+ | Elite motor. Consistently outworks peers. |
+| 50-59 | Above average effort for position. |
+| 40-49 | Average. Doing what's expected. |
+| Below 40 | Below average activity. May indicate skill-over-effort player or limited role. |
+
+### Limitations
+
+- Measures activity, not efficiency or skill
+- Does not account for quality of competition
+- Players with limited ice time may have inflated per-60 rates
+- Requires 10+ games played for inclusion
 
 ## Tech Stack
 

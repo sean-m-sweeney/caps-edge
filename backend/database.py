@@ -49,6 +49,8 @@ def init_db():
             hits INTEGER,
             pim INTEGER,
             faceoff_win_pct REAL,
+            shots INTEGER,
+            shots_per_60 REAL,
             FOREIGN KEY (player_id) REFERENCES players(player_id)
         )
     """)
@@ -89,9 +91,12 @@ def init_db():
             top_shot_speed_mph REAL,
             shot_speed_percentile INTEGER,
 
-            -- Calculated
-            hustle_score REAL,
-            hustle_percentile INTEGER,
+            -- Shots percentile (for shots/60)
+            shots_percentile INTEGER,
+
+            -- Motor Index (replaces Hustle Score)
+            motor_index REAL,
+            motor_percentile INTEGER,
 
             FOREIGN KEY (player_id) REFERENCES players(player_id)
         )
@@ -105,24 +110,76 @@ def init_db():
         )
     """)
 
-    # League stats for percentile calculations (hustle score)
+    # Position averages table (rebuilt on each refresh)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS position_averages (
+            position TEXT PRIMARY KEY,
+            avg_bursts_per_60 REAL,
+            avg_distance_per_game REAL,
+            avg_hits_per_60 REAL,
+            avg_shots_per_60 REAL,
+            avg_off_zone_pct REAL,
+            sample_size INTEGER
+        )
+    """)
+
+    # League stats for Motor Index percentile calculations
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS league_stats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             updated_at DATETIME NOT NULL,
             player_id INTEGER NOT NULL,
+            position TEXT,
             games_played INTEGER,
             avg_toi REAL,
             hits INTEGER,
+            shots INTEGER,
             bursts_20_plus INTEGER,
             distance_per_game_miles REAL,
             off_zone_time_pct REAL,
-            hustle_score REAL
+            motor_index REAL
         )
     """)
 
+    # Run migrations for existing databases
+    _run_migrations(cursor)
+
     conn.commit()
     conn.close()
+
+
+def _run_migrations(cursor):
+    """Run database migrations for schema changes."""
+    # Check if we need to add new columns to player_stats
+    cursor.execute("PRAGMA table_info(player_stats)")
+    columns = [col[1] for col in cursor.fetchall()]
+
+    if "shots" not in columns:
+        cursor.execute("ALTER TABLE player_stats ADD COLUMN shots INTEGER")
+    if "shots_per_60" not in columns:
+        cursor.execute("ALTER TABLE player_stats ADD COLUMN shots_per_60 REAL")
+
+    # Check player_edge_stats for motor columns
+    cursor.execute("PRAGMA table_info(player_edge_stats)")
+    edge_columns = [col[1] for col in cursor.fetchall()]
+
+    if "motor_index" not in edge_columns:
+        cursor.execute("ALTER TABLE player_edge_stats ADD COLUMN motor_index REAL")
+    if "motor_percentile" not in edge_columns:
+        cursor.execute("ALTER TABLE player_edge_stats ADD COLUMN motor_percentile INTEGER")
+    if "shots_percentile" not in edge_columns:
+        cursor.execute("ALTER TABLE player_edge_stats ADD COLUMN shots_percentile INTEGER")
+
+    # Check league_stats for position and shots
+    cursor.execute("PRAGMA table_info(league_stats)")
+    league_columns = [col[1] for col in cursor.fetchall()]
+
+    if "position" not in league_columns:
+        cursor.execute("ALTER TABLE league_stats ADD COLUMN position TEXT")
+    if "shots" not in league_columns:
+        cursor.execute("ALTER TABLE league_stats ADD COLUMN shots INTEGER")
+    if "motor_index" not in league_columns:
+        cursor.execute("ALTER TABLE league_stats ADD COLUMN motor_index REAL")
 
 
 def get_last_updated() -> Optional[datetime]:
@@ -172,8 +229,8 @@ def upsert_player_stats(player_id: int, stats: dict):
     cursor.execute("""
         INSERT INTO player_stats (
             player_id, updated_at, games_played, avg_toi, goals, assists,
-            points, plus_minus, hits, pim, faceoff_win_pct
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            points, plus_minus, hits, pim, faceoff_win_pct, shots, shots_per_60
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         player_id,
         datetime.now().isoformat(),
@@ -185,7 +242,9 @@ def upsert_player_stats(player_id: int, stats: dict):
         stats.get("plus_minus"),
         stats.get("hits"),
         stats.get("pim"),
-        stats.get("faceoff_win_pct")
+        stats.get("faceoff_win_pct"),
+        stats.get("shots"),
+        stats.get("shots_per_60")
     ))
     conn.commit()
     conn.close()
@@ -212,8 +271,9 @@ def upsert_player_edge_stats(player_id: int, stats: dict):
             neu_zone_time_pct,
             zone_starts_off_pct, zone_starts_percentile,
             top_shot_speed_mph, shot_speed_percentile,
-            hustle_score, hustle_percentile
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            shots_percentile,
+            motor_index, motor_percentile
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         player_id,
         datetime.now().isoformat(),
@@ -234,8 +294,9 @@ def upsert_player_edge_stats(player_id: int, stats: dict):
         stats.get("zone_starts_percentile"),
         stats.get("top_shot_speed_mph"),
         stats.get("shot_speed_percentile"),
-        stats.get("hustle_score"),
-        stats.get("hustle_percentile")
+        stats.get("shots_percentile"),
+        stats.get("motor_index"),
+        stats.get("motor_percentile")
     ))
     conn.commit()
     conn.close()
@@ -250,42 +311,85 @@ def clear_league_stats():
     conn.close()
 
 
+def clear_position_averages():
+    """Clear position averages table for fresh calculation."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM position_averages")
+    conn.commit()
+    conn.close()
+
+
+def insert_position_averages(position: str, avgs: dict):
+    """Insert position averages."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT OR REPLACE INTO position_averages (
+            position, avg_bursts_per_60, avg_distance_per_game,
+            avg_hits_per_60, avg_shots_per_60, avg_off_zone_pct, sample_size
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        position,
+        avgs.get("avg_bursts_per_60"),
+        avgs.get("avg_distance_per_game"),
+        avgs.get("avg_hits_per_60"),
+        avgs.get("avg_shots_per_60"),
+        avgs.get("avg_off_zone_pct"),
+        avgs.get("sample_size")
+    ))
+    conn.commit()
+    conn.close()
+
+
+def get_position_averages() -> dict:
+    """Get position averages as a dict keyed by position."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM position_averages")
+    rows = cursor.fetchall()
+    conn.close()
+    return {row["position"]: dict(row) for row in rows}
+
+
 def insert_league_stats(player_id: int, stats: dict):
     """Insert league-wide player stats for percentile calculation."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO league_stats (
-            updated_at, player_id, games_played, avg_toi, hits,
-            bursts_20_plus, distance_per_game_miles, off_zone_time_pct, hustle_score
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            updated_at, player_id, position, games_played, avg_toi, hits, shots,
+            bursts_20_plus, distance_per_game_miles, off_zone_time_pct, motor_index
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         datetime.now().isoformat(),
         player_id,
+        stats.get("position"),
         stats.get("games_played"),
         stats.get("avg_toi"),
         stats.get("hits"),
+        stats.get("shots"),
         stats.get("bursts_20_plus"),
         stats.get("distance_per_game_miles"),
         stats.get("off_zone_time_pct"),
-        stats.get("hustle_score")
+        stats.get("motor_index")
     ))
     conn.commit()
     conn.close()
 
 
-def get_league_hustle_scores() -> list:
-    """Get all hustle scores from league stats for percentile calculation."""
+def get_league_motor_scores() -> list:
+    """Get all motor index scores from league stats for percentile calculation."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT hustle_score FROM league_stats
-        WHERE games_played >= 10 AND hustle_score IS NOT NULL
-        ORDER BY hustle_score
+        SELECT motor_index FROM league_stats
+        WHERE games_played >= 10 AND motor_index IS NOT NULL
+        ORDER BY motor_index
     """)
     rows = cursor.fetchall()
     conn.close()
-    return [row["hustle_score"] for row in rows]
+    return [row["motor_index"] for row in rows]
 
 
 def get_all_players_with_stats() -> list:
@@ -297,6 +401,7 @@ def get_all_players_with_stats() -> list:
             p.player_id, p.name, p.position, p.jersey_number,
             s.games_played, s.avg_toi, s.goals, s.assists, s.points,
             s.plus_minus, s.hits, s.pim, s.faceoff_win_pct,
+            s.shots, s.shots_per_60,
             e.top_speed_mph, e.top_speed_percentile,
             e.bursts_20_plus, e.bursts_20_percentile,
             e.bursts_22_plus, e.bursts_22_percentile,
@@ -306,7 +411,8 @@ def get_all_players_with_stats() -> list:
             e.neu_zone_time_pct,
             e.zone_starts_off_pct, e.zone_starts_percentile,
             e.top_shot_speed_mph, e.shot_speed_percentile,
-            e.hustle_score, e.hustle_percentile
+            e.shots_percentile,
+            e.motor_index, e.motor_percentile
         FROM players p
         LEFT JOIN player_stats s ON p.player_id = s.player_id
         LEFT JOIN player_edge_stats e ON p.player_id = e.player_id
@@ -327,6 +433,7 @@ def get_player_by_id(player_id: int) -> Optional[dict]:
             p.player_id, p.name, p.position, p.jersey_number,
             s.games_played, s.avg_toi, s.goals, s.assists, s.points,
             s.plus_minus, s.hits, s.pim, s.faceoff_win_pct,
+            s.shots, s.shots_per_60,
             e.top_speed_mph, e.top_speed_percentile,
             e.bursts_20_plus, e.bursts_20_percentile,
             e.bursts_22_plus, e.bursts_22_percentile,
@@ -336,7 +443,8 @@ def get_player_by_id(player_id: int) -> Optional[dict]:
             e.neu_zone_time_pct,
             e.zone_starts_off_pct, e.zone_starts_percentile,
             e.top_shot_speed_mph, e.shot_speed_percentile,
-            e.hustle_score, e.hustle_percentile
+            e.shots_percentile,
+            e.motor_index, e.motor_percentile
         FROM players p
         LEFT JOIN player_stats s ON p.player_id = s.player_id
         LEFT JOIN player_edge_stats e ON p.player_id = e.player_id

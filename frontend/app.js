@@ -20,6 +20,9 @@ const forwardsBody = document.getElementById('forwards-body');
 const defensemenBody = document.getElementById('defensemen-body');
 const lastUpdatedEl = document.getElementById('last-updated');
 const legendEl = document.getElementById('legend');
+const infoSection = document.getElementById('info-section');
+const infoToggle = document.getElementById('info-toggle');
+const infoContent = document.getElementById('info-content');
 
 /**
  * Format relative time (e.g., "2 hours ago")
@@ -115,6 +118,7 @@ function renderPlayerRow(player) {
             <td class="table-cell ${stats.plus_minus > 0 ? 'text-green-400' : stats.plus_minus < 0 ? 'text-red-400' : ''}">${stats.plus_minus > 0 ? '+' : ''}${formatStat(stats.plus_minus)}</td>
             <td class="table-cell">${formatStat(stats.hits)}</td>
             <td class="table-cell">${formatStat(stats.pim)}</td>
+            <td class="table-cell">${formatStatWithPercentile(stats.shots_per_60, edge.shots_percentile)}</td>
             <td class="table-cell">${showFaceoff ? formatStat(stats.faceoff_win_pct, 1) : '-'}</td>
             <td class="table-cell">${formatStatWithPercentile(edge.top_speed_mph, edge.top_speed_percentile)}</td>
             <td class="table-cell">${formatStatWithPercentile(edge.bursts_20_plus, edge.bursts_20_percentile, 0)}</td>
@@ -124,7 +128,7 @@ function renderPlayerRow(player) {
             <td class="table-cell">${formatStatWithPercentile(edge.def_zone_time_pct, edge.def_zone_percentile)}</td>
             <td class="table-cell">${formatStatWithPercentile(edge.zone_starts_off_pct, edge.zone_starts_percentile)}</td>
             <td class="table-cell">${formatStatWithPercentile(edge.top_shot_speed_mph, edge.shot_speed_percentile)}</td>
-            <td class="table-cell">${formatStatWithPercentile(edge.hustle_score, edge.hustle_percentile)}</td>
+            <td class="table-cell">${formatStatWithPercentile(edge.motor_index, edge.motor_percentile)}</td>
         </tr>
     `;
 }
@@ -161,6 +165,7 @@ function sortPlayersArray(playersArray, field, direction) {
         'plus_minus': 'stats.plus_minus',
         'hits': 'stats.hits',
         'pim': 'stats.pim',
+        'shots_per_60': 'stats.shots_per_60',
         'faceoff_win_pct': 'stats.faceoff_win_pct',
         'top_speed_mph': 'edge_stats.top_speed_mph',
         'bursts_20_plus': 'edge_stats.bursts_20_plus',
@@ -170,7 +175,7 @@ function sortPlayersArray(playersArray, field, direction) {
         'def_zone_time_pct': 'edge_stats.def_zone_time_pct',
         'zone_starts_off_pct': 'edge_stats.zone_starts_off_pct',
         'top_shot_speed_mph': 'edge_stats.top_shot_speed_mph',
-        'hustle_score': 'edge_stats.hustle_score'
+        'motor_index': 'edge_stats.motor_index'
     };
 
     const path = fieldMap[field] || field;
@@ -270,6 +275,18 @@ function setupSortHandlers() {
 }
 
 /**
+ * Setup info section toggle
+ */
+function setupInfoToggle() {
+    if (infoToggle && infoContent) {
+        infoToggle.addEventListener('click', function() {
+            const isExpanded = infoContent.classList.toggle('expanded');
+            this.textContent = isExpanded ? 'How to read this data ▲' : 'How to read this data ▼';
+        });
+    }
+}
+
+/**
  * Fetch players data from API
  */
 async function fetchPlayers() {
@@ -305,6 +322,7 @@ async function fetchPlayers() {
         loadingEl.classList.add('hidden');
         tableContainer.classList.remove('hidden');
         legendEl.classList.remove('hidden');
+        infoSection.classList.remove('hidden');
 
     } catch (error) {
         console.error('Error fetching players:', error);
@@ -318,6 +336,7 @@ async function fetchPlayers() {
  */
 function init() {
     setupSortHandlers();
+    setupInfoToggle();
     fetchPlayers();
 
     // Refresh data periodically (every 5 minutes)
