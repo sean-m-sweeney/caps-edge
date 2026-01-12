@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caps Edge - NHL Edge Stats for Washington Capitals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'caps-red': '#C8102E',
+                        'caps-navy': '#041E42',
+                        'dark-bg': '#1a1a2e',
+                        'dark-card': '#16213e',
+                        'dark-border': '#374151'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-bg text-white min-h-screen">
+    <!-- Header -->
+    <header class="bg-caps-navy border-b border-dark-border">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-caps-red">Caps Edge</h1>
+                    <p class="text-gray-400 mt-1">NHL Edge Stats for Washington Capitals</p>
+                </div>
+                <div class="mt-4 md:mt-0 text-sm text-gray-400">
+                    <span id="last-updated">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Loading State -->
+        <div id="loading" class="flex items-center justify-center py-20">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-caps-red"></div>
+            <span class="ml-4 text-gray-400">Loading player data...</span>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden bg-red-900/30 border border-red-500 rounded-lg p-6 text-center">
+            <p class="text-red-400">Failed to load player data. Please try again later.</p>
+        </div>
+
+        <!-- Stats Table -->
+        <div id="table-container" class="hidden overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="sticky top-0 z-10">
+                    <tr class="bg-caps-navy text-left">
+                        <!-- Traditional Stats -->
+                        <th class="table-header sticky left-0 z-20 bg-caps-navy" data-sort="jersey_number">#</th>
+                        <th class="table-header sticky left-12 z-20 bg-caps-navy min-w-[140px]" data-sort="name">Name</th>
+                        <th class="table-header" data-sort="position">Pos</th>
+                        <th class="table-header" data-sort="games_played">GP</th>
+                        <th class="table-header" data-sort="avg_toi">TOI</th>
+                        <th class="table-header" data-sort="goals">G</th>
+                        <th class="table-header" data-sort="assists">A</th>
+                        <th class="table-header" data-sort="points">P</th>
+                        <th class="table-header" data-sort="plus_minus">+/-</th>
+                        <th class="table-header" data-sort="hits">Hits</th>
+                        <th class="table-header" data-sort="pim">PIM</th>
+                        <th class="table-header" data-sort="faceoff_win_pct">FO%</th>
+                        <!-- Edge Stats -->
+                        <th class="table-header edge-header" data-sort="top_speed_mph">Top Speed</th>
+                        <th class="table-header edge-header" data-sort="bursts_20_plus">Bursts 20+</th>
+                        <th class="table-header edge-header" data-sort="bursts_22_plus">Bursts 22+</th>
+                        <th class="table-header edge-header" data-sort="distance_per_game_miles">Dist/G</th>
+                        <th class="table-header edge-header" data-sort="off_zone_time_pct">O-Zone%</th>
+                        <th class="table-header edge-header" data-sort="def_zone_time_pct">D-Zone%</th>
+                        <th class="table-header edge-header" data-sort="zone_starts_off_pct">ZS%</th>
+                        <th class="table-header edge-header" data-sort="top_shot_speed_mph">Shot Speed</th>
+                        <th class="table-header edge-header" data-sort="hustle_score">Hustle</th>
+                    </tr>
+                </thead>
+                <tbody id="players-body">
+                    <!-- Players will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend -->
+        <div id="legend" class="hidden mt-6 p-4 bg-dark-card rounded-lg border border-dark-border">
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">Legend</h3>
+            <div class="flex flex-wrap gap-4 text-xs text-gray-400">
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded bg-green-500/30"></span>
+                    <span>75th+ percentile</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded bg-red-500/30"></span>
+                    <span>Below 25th percentile</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500">(##)</span>
+                    <span>League percentile</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                Hustle Score = Bursts/60 (30%) + Distance/G (25%) + Hits/60 (25%) + O-Zone% (20%)
+            </p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-caps-navy border-t border-dark-border mt-12">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <!-- Ko-fi Button -->
+                <div>
+                    <a href="https://ko-fi.com/capsedge" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 px-4 py-2 bg-[#FF5E5B] hover:bg-[#ff4744] text-white rounded-lg transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311z"/>
+                        </svg>
+                        If you find this useful, buy me a coffee
+                    </a>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="text-xs text-gray-500 text-center md:text-right">
+                    <p>Data sourced from NHL Edge. Not affiliated with the NHL or Washington Capitals.</p>
+                    <p class="mt-1">&copy; 2026 Caps Edge</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  caps-edge:
+    build: .
+    container_name: caps-edge
+    ports:
+      - "8000:8000"
+    volumes:
+      - caps-edge-data:/app/data
+    environment:
+      - API_REFRESH_KEY=${API_REFRESH_KEY:-change-me-in-production}
+      - TZ=America/New_York
+      - DATA_DIR=/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  caps-edge-data:
+    driver: local

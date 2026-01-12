@@ -1,0 +1,166 @@
+/* Caps Edge - Custom Styles */
+
+/* Base styles */
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Table styles */
+.table-header {
+    padding: 0.75rem 0.5rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #a1a1aa;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    transition: color 0.2s;
+    border-bottom: 2px solid #374151;
+}
+
+.table-header:hover {
+    color: #C8102E;
+}
+
+.table-header.edge-header {
+    background: linear-gradient(180deg, #041E42 0%, #0a2d5c 100%);
+}
+
+.table-cell {
+    padding: 0.625rem 0.5rem;
+    white-space: nowrap;
+    font-size: 0.875rem;
+}
+
+.table-row {
+    transition: background-color 0.15s;
+}
+
+.table-row:hover {
+    background-color: rgba(22, 33, 62, 0.5);
+}
+
+/* Sticky columns background fix */
+.table-row:hover td.sticky {
+    background-color: rgba(22, 33, 62, 0.9) !important;
+}
+
+/* Percentile coloring */
+.percentile-high {
+    background-color: rgba(34, 197, 94, 0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.percentile-low {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+/* Sort indicator */
+.sort-indicator {
+    font-size: 0.625rem;
+    color: #C8102E;
+}
+
+/* Loading spinner */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .table-header,
+    .table-cell {
+        padding: 0.5rem 0.375rem;
+        font-size: 0.75rem;
+    }
+
+    .table-header {
+        font-size: 0.625rem;
+    }
+
+    /* Make sticky columns narrower on mobile */
+    .sticky.left-0 {
+        left: 0;
+        min-width: 32px;
+    }
+
+    .sticky.left-12 {
+        left: 32px;
+        min-width: 100px;
+    }
+}
+
+/* Horizontal scroll shadow indicators */
+.overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #374151 #1a1a2e;
+}
+
+/* Link styles */
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Ko-fi button hover */
+a[href*="ko-fi"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 94, 91, 0.3);
+}
+
+/* Plus/minus coloring already in Tailwind classes */
+
+/* Table container for proper scrolling */
+#table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid #374151;
+    border-radius: 0.5rem;
+}
+
+#table-container table {
+    min-width: 1400px;
+}
+
+/* Header section border */
+header {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Card styling for legend */
+.bg-dark-card {
+    background-color: #16213e;
+}
