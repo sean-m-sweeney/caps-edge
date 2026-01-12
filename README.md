@@ -1,17 +1,17 @@
-# Caps Edge
+# Chel Edge
 
-NHL Edge Stats for all NHL Teams - Advanced skating and effort metrics with league percentile context.
+NHL Edge stats in a comprehensive, sortable format.
 
 ![Screenshot placeholder](screenshot.png)
 
 ## Overview
 
-Caps Edge displays NHL Edge tracking statistics for all NHL players. Includes skating speed, burst counts, zone time, shot velocity, and a custom Motor Index. Every stat includes a league-wide percentile for comparison. View by team, division, conference, or entire league.
+Chel Edge combines traditional NHL stats with NHL Edge tracking data in one sortable view. Filter by team, division, conference, or view the entire league. Every stat includes a league-wide percentile for comparison.
 
 ## Features
 
 - **League-Wide Coverage**: View stats for any NHL team, division, conference, or entire league
-- **Traditional Stats**: GP, TOI, G, A, P, +/-, Hits, PIM, Shots/60, FO%
+- **Traditional Stats**: GP, TOI, G, A, P, P/60, +/-, Hits, PIM, Shots/60, FO%
 - **Edge Stats with Percentiles**:
   - Top skating speed (mph)
   - Bursts over 20 mph and 22 mph
@@ -19,7 +19,6 @@ Caps Edge displays NHL Edge tracking statistics for all NHL players. Includes sk
   - Offensive/Defensive zone time percentages
   - Zone start percentage
   - Top shot speed (mph)
-  - Motor Index (effort relative to position average)
 - **Interactive Table**: Click any column to sort
 - **Percentile Coloring**: Green for 75th+ percentile, red for below 25th
 - **Player Links**: Click any player name to view their Hockey-Reference page
@@ -120,45 +119,6 @@ The refresh fetches Edge stats for all ~850 qualified NHL skaters (10+ games pla
 
 You can also trigger a manual refresh using the API endpoint.
 
-## Motor Index Methodology
-
-Motor Index measures player effort relative to position average. Unlike raw stats that favor certain positions, Motor Index compares each player only to others who play the same role.
-
-### Components
-
-| Stat | Weight | Rationale |
-|------|--------|-----------|
-| Speed Bursts/60 | 25% | Explosive effort, backchecking, attacking loose pucks |
-| Distance/Game | 20% | Total work output, can't fake skating miles |
-| Hits/60 | 20% | Physical engagement, finishing checks |
-| Shots/60 | 20% | Offensive aggression, creating chances |
-| O-Zone Time % | 15% | Sustained pressure, not floating in neutral zone |
-
-### Calculation
-
-Each component is calculated as a ratio to the player's position average:
-- A player exactly at average for all stats scores 50
-- Scoring above average increases the index
-- Scoring below average decreases it
-
-The final score typically ranges from 25-75, with elite effort players reaching 60+.
-
-### Interpreting Scores
-
-| Score | Meaning |
-|-------|---------|
-| 60+ | Elite motor. Consistently outworks peers. |
-| 50-59 | Above average effort for position. |
-| 40-49 | Average. Doing what's expected. |
-| Below 40 | Below average activity. May indicate skill-over-effort player or limited role. |
-
-### Limitations
-
-- Measures activity, not efficiency or skill
-- Does not account for quality of competition
-- Players with limited ice time may have inflated per-60 rates
-- Requires 10+ games played for inclusion
-
 ## Tech Stack
 
 - **Backend**: Python 3.11, FastAPI, SQLite
@@ -169,14 +129,13 @@ The final score typically ranges from 25-75, with elite effort players reaching 
 ## Project Structure
 
 ```
-caps-edge/
+chel-edge/
 ├── backend/
 │   ├── __init__.py
 │   ├── main.py           # FastAPI app and routes
 │   ├── database.py       # SQLite setup and queries
 │   ├── fetcher.py        # NHL API data fetching
-│   ├── models.py         # Pydantic models
-│   └── hustle.py         # Hustle score calculation
+│   └── models.py         # Pydantic models
 ├── frontend/
 │   ├── index.html        # Main page
 │   ├── app.js            # Data fetching and table rendering
@@ -209,13 +168,12 @@ Contributions welcome! Please open an issue first to discuss proposed changes.
 
 - **Data**: [NHL Edge](https://www.nhl.com/stats/edge) via the NHL API
 - **API Library**: [nhl-api-py](https://github.com/coreyjs/nhl-api-py) by Corey Schaf
-- **Inspiration**: Caps fan community
 
 ## Support
 
 If you find this useful, consider buying me a coffee!
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/capsedge)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/cheledge)
 
 ## License
 
@@ -223,4 +181,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Disclaimer
 
-This project is not affiliated with, endorsed by, or connected to the NHL, Washington Capitals, or any NHL team. All data is sourced from publicly available NHL APIs.
+This project is not affiliated with, endorsed by, or connected to the NHL or any NHL team. All data is sourced from publicly available NHL APIs.

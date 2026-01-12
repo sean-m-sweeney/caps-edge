@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  caps-edge:
+  chel-edge:
     build: .
-    container_name: caps-edge
+    container_name: chel-edge
     ports:
       - "8000:8000"
     volumes:
-      - caps-edge-data:/app/data
+      - chel-edge-data:/app/data
     environment:
       - API_REFRESH_KEY=${API_REFRESH_KEY:-change-me-in-production}
       - TZ=America/New_York
@@ -21,5 +21,5 @@ services:
       start_period: 60s
 
 volumes:
-  caps-edge-data:
+  chel-edge-data:
     driver: local

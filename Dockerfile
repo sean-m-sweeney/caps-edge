@@ -16,11 +16,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 COPY scripts/ ./scripts/
-COPY crontab /etc/cron.d/caps-edge-cron
+COPY crontab /etc/cron.d/chel-edge-cron
 
 # Set up cron
-RUN chmod 0644 /etc/cron.d/caps-edge-cron && \
-    crontab /etc/cron.d/caps-edge-cron
+RUN chmod 0644 /etc/cron.d/chel-edge-cron && \
+    crontab /etc/cron.d/chel-edge-cron
 
 # Create data directory
 RUN mkdir -p /app/data
