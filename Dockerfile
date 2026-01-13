@@ -1,6 +1,19 @@
+# Stage 1: Build Tailwind CSS
+FROM node:20-slim AS css-builder
+
+WORKDIR /build
+
+# Copy package files and install
+COPY package.json tailwind.config.js ./
+RUN npm install
+
+# Copy frontend source and build CSS
+COPY frontend/ ./frontend/
+RUN npm run build:css
+
+# Stage 2: Python application
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
 # Install cron and other dependencies
@@ -17,6 +30,9 @@ COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 COPY scripts/ ./scripts/
 COPY crontab /etc/cron.d/chel-edge-cron
+
+# Copy built CSS from builder stage (overwrites the source styles.css)
+COPY --from=css-builder /build/frontend/styles.css ./frontend/styles.css
 
 # Set up cron
 RUN chmod 0644 /etc/cron.d/chel-edge-cron && \

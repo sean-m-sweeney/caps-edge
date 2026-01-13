@@ -1,0 +1,11 @@
+{
+  "name": "edge-report",
+  "version": "2.0.0",
+  "description": "NHL Edge Stats",
+  "scripts": {
+    "build:css": "tailwindcss -i ./frontend/src/input.css -o ./frontend/styles.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
