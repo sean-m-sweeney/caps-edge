@@ -13,11 +13,11 @@ let currentView = 'forwards'; // 'forwards', 'defensemen', or 'goalies'
 let sortState = { field: 'points', direction: 'desc' };
 let goalieSortState = { field: 'wins', direction: 'desc' };
 
-// Virtual scrolling config
+// Virtual scrolling config (disabled - causes UX issues)
 const VIRTUAL_SCROLL = {
-    rowHeight: 41,      // Approximate row height in pixels
-    bufferRows: 5,      // Extra rows to render above/below viewport
-    enabled: true       // Toggle virtual scrolling
+    rowHeight: 41,
+    bufferRows: 5,
+    enabled: false      // Disabled - clunky scroll-in-box UX
 };
 let filterState = {
     type: 'team',
