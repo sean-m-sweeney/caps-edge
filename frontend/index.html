@@ -156,7 +156,7 @@
         <div id="table-container" class="hidden">
             <div class="border border-grid-line bg-void-light/50 backdrop-blur-sm">
                 <!-- Single Table -->
-                <div class="overflow-x-auto custom-scrollbar">
+                <div class="overflow-x-auto overflow-y-auto max-h-[70vh] custom-scrollbar" id="skater-table-wrapper">
                     <table class="w-full text-xs text-left border-collapse" id="players-table">
                         <thead class="sticky top-0 z-30 bg-void border-b-2 border-neon-cyan text-neon-cyan font-bold tracking-wider">
                             <tr>
@@ -186,7 +186,7 @@
                 </div>
 
                 <!-- Goalie Table (hidden by default) -->
-                <div id="goalie-table-wrapper" class="hidden overflow-x-auto custom-scrollbar">
+                <div id="goalie-table-wrapper" class="hidden overflow-x-auto overflow-y-auto max-h-[70vh] custom-scrollbar">
                     <table class="w-full text-xs text-left border-collapse" id="goalies-table">
                         <thead class="sticky top-0 z-30 bg-void border-b-2 border-neon-cyan text-neon-cyan font-bold tracking-wider">
                             <tr>
@@ -258,6 +258,6 @@
         </div>
     </footer>
 
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>

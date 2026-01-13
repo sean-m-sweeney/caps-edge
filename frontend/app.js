@@ -12,6 +12,13 @@ let teamSpeed = null;
 let currentView = 'forwards'; // 'forwards', 'defensemen', or 'goalies'
 let sortState = { field: 'points', direction: 'desc' };
 let goalieSortState = { field: 'wins', direction: 'desc' };
+
+// Virtual scrolling config
+const VIRTUAL_SCROLL = {
+    rowHeight: 41,      // Approximate row height in pixels
+    bufferRows: 5,      // Extra rows to render above/below viewport
+    enabled: true       // Toggle virtual scrolling
+};
 let filterState = {
     type: 'team',
     team: 'WSH',
@@ -36,7 +43,7 @@ const positionToggle = document.getElementById('position-toggle');
 const positionCountEl = document.getElementById('position-count');
 const goaliesBody = document.getElementById('goalies-body');
 const goalieTableWrapper = document.getElementById('goalie-table-wrapper');
-const skaterTableWrapper = document.querySelector('#players-table').parentElement;
+const skaterTableWrapper = document.getElementById('skater-table-wrapper');
 const teamSpeedDisplay = document.getElementById('team-speed-display');
 
 /**
@@ -346,6 +353,65 @@ function updateSortIndicators() {
 }
 
 /**
+ * Get current data array based on view
+ */
+function getCurrentData() {
+    if (currentView === 'goalies') return goalies;
+    return currentView === 'forwards' ? forwards : defensemen;
+}
+
+/**
+ * Get current render function based on view
+ */
+function getCurrentRenderer() {
+    return currentView === 'goalies' ? renderGoalieRow : renderPlayerRow;
+}
+
+/**
+ * Get current tbody element based on view
+ */
+function getCurrentTbody() {
+    return currentView === 'goalies' ? goaliesBody : playersBody;
+}
+
+/**
+ * Render visible rows with virtual scrolling
+ */
+function renderVisibleRows(scrollTop = 0) {
+    const data = getCurrentData();
+    const renderer = getCurrentRenderer();
+    const tbody = getCurrentTbody();
+
+    if (!VIRTUAL_SCROLL.enabled || data.length < 50) {
+        // For small datasets, render all rows
+        tbody.innerHTML = data.map(renderer).join('');
+        return;
+    }
+
+    const { rowHeight, bufferRows } = VIRTUAL_SCROLL;
+    const containerHeight = 600; // Approximate visible height
+
+    // Calculate visible range
+    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferRows);
+    const visibleCount = Math.ceil(containerHeight / rowHeight) + (bufferRows * 2);
+    const endIndex = Math.min(data.length, startIndex + visibleCount);
+
+    // Render only visible rows
+    const visibleData = data.slice(startIndex, endIndex);
+    const rowsHtml = visibleData.map(renderer).join('');
+
+    // Calculate padding to maintain scroll position
+    const paddingTop = startIndex * rowHeight;
+    const paddingBottom = (data.length - endIndex) * rowHeight;
+
+    tbody.innerHTML = `
+        <tr style="height: ${paddingTop}px;"><td colspan="20"></td></tr>
+        ${rowsHtml}
+        <tr style="height: ${paddingBottom}px;"><td colspan="20"></td></tr>
+    `;
+}
+
+/**
  * Render the current table
  */
 function renderTable() {
@@ -353,16 +419,37 @@ function renderTable() {
         // Show goalie table, hide skater table
         skaterTableWrapper.classList.add('hidden');
         goalieTableWrapper.classList.remove('hidden');
-        goaliesBody.innerHTML = goalies.map(renderGoalieRow).join('');
         positionCountEl.textContent = `${goalies.length} goalies`;
     } else {
         // Show skater table, hide goalie table
         skaterTableWrapper.classList.remove('hidden');
         goalieTableWrapper.classList.add('hidden');
         const currentPlayers = currentView === 'forwards' ? forwards : defensemen;
-        playersBody.innerHTML = currentPlayers.map(renderPlayerRow).join('');
         positionCountEl.textContent = `${currentPlayers.length} ${currentView === 'forwards' ? 'forwards' : 'defensemen'}`;
     }
+
+    // Render with virtual scrolling
+    renderVisibleRows(0);
+}
+
+/**
+ * Setup virtual scroll listeners
+ */
+function setupVirtualScroll() {
+    // Throttled scroll handler
+    let scrollTimeout;
+    const handleScroll = (e) => {
+        if (!VIRTUAL_SCROLL.enabled) return;
+
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            renderVisibleRows(e.target.scrollTop);
+        }, 16); // ~60fps
+    };
+
+    // Add scroll listeners to both table wrappers
+    skaterTableWrapper.addEventListener('scroll', handleScroll);
+    goalieTableWrapper.addEventListener('scroll', handleScroll);
 }
 
 /**
@@ -736,6 +823,7 @@ async function init() {
     setupInfoToggle();
     setupPositionToggle();
     setupFilterHandlers();
+    setupVirtualScroll();
     updateFilterDropdowns();
 
     await fetchTeams();
