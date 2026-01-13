@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
     <script>
         tailwind.config = {
             theme: {
@@ -171,6 +171,51 @@
             </div>
         </div>
     </main>
-    <script src="app.js?v=5"></script>
+
+    <!-- Percentile Legend -->
+    <footer class="bg-void-light border-t border-grid-line mt-4">
+        <div class="max-w-[1920px] mx-auto px-4 py-4">
+            <div class="text-center mb-3">
+                <span class="font-arcade text-[10px] text-gray-500 uppercase tracking-widest">NHL Edge Percentile Key</span>
+            </div>
+            <div class="flex justify-center items-center gap-1 flex-wrap">
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-0 text-xs font-mono font-bold">0-9</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-10 text-xs font-mono font-bold">10-19</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-20 text-xs font-mono font-bold">20-29</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-30 text-xs font-mono font-bold">30-39</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-40 text-xs font-mono font-bold">40-49</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-50 text-xs font-mono font-bold">50-59</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-60 text-xs font-mono font-bold">60-69</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-70 text-xs font-mono font-bold">70-79</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-80 text-xs font-mono font-bold">80-89</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-1 bg-void rounded border border-grid-line">
+                    <span class="pct-90 text-xs font-mono font-bold">90-100</span>
+                </div>
+            </div>
+            <div class="text-center mt-3 text-[10px] text-gray-600">
+                Percentiles calculated across all NHL skaters in database
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js?v=6"></script>
 </body>
 </html>

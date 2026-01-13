@@ -70,24 +70,29 @@ function getHockeyRefUrl(playerName) {
 }
 
 /**
+ * Get CSS class for percentile tier (0-100 -> pct-0 through pct-90)
+ */
+function getPercentileClass(pct) {
+    if (pct === null || pct === undefined) return 'text-gray-600';
+    if (pct >= 90) return 'pct-90';
+    if (pct >= 80) return 'pct-80';
+    if (pct >= 70) return 'pct-70';
+    if (pct >= 60) return 'pct-60';
+    if (pct >= 50) return 'pct-50';
+    if (pct >= 40) return 'pct-40';
+    if (pct >= 30) return 'pct-30';
+    if (pct >= 20) return 'pct-20';
+    if (pct >= 10) return 'pct-10';
+    return 'pct-0';
+}
+
+/**
  * Render a single player row
  */
 function renderPlayerRow(player) {
     const stats = player.stats || {};
     const edge = player.edge_stats || {};
     const showTeamCol = filterState.type !== 'team';
-
-    // Helper for heatmaps
-    const getSpeedClass = (pct) => {
-        if (pct >= 90) return 'cell-elite';
-        if (pct >= 75) return 'cell-great';
-        return '';
-    };
-
-    const getShotClass = (pct) => {
-        if (pct >= 90) return 'cell-hot';
-        return '';
-    };
 
     return `
         <tr class="table-row group transition-colors">
@@ -107,28 +112,28 @@ function renderPlayerRow(player) {
             <td class="p-3 text-right font-mono text-gray-400">${formatStat(stats.assists)}</td>
             <td class="p-3 text-right font-mono text-white font-bold">${formatStat(stats.points)}</td>
             <td class="p-3 text-right font-mono text-gray-400 border-r border-grid-line">${formatStat(stats.hits)}</td>
-            <td class="p-3 text-right font-mono ${getSpeedClass(edge.top_speed_percentile)}">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.top_speed_percentile)}">
                 ${formatStat(edge.top_speed_mph, 1)}
             </td>
-            <td class="p-3 text-right font-mono ${getSpeedClass(edge.bursts_20_percentile)}">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.bursts_20_percentile)}">
                 ${formatStat(edge.bursts_20_plus, 0)}
             </td>
-            <td class="p-3 text-right font-mono ${getSpeedClass(edge.bursts_22_percentile)}">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.bursts_22_percentile)}">
                 ${formatStat(edge.bursts_22_plus, 0)}
             </td>
-            <td class="p-3 text-right font-mono ${getSpeedClass(edge.distance_percentile)} border-r border-grid-line">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.distance_percentile)} border-r border-grid-line">
                 ${formatStat(edge.distance_per_game_miles, 2)}
             </td>
-            <td class="p-3 text-right font-mono ${getShotClass(edge.shot_speed_percentile)}">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.shot_speed_percentile)}">
                 ${formatStat(edge.top_shot_speed_mph, 1)}
             </td>
             <td class="p-3 text-right font-mono text-gray-400 border-r border-grid-line">
                 ${formatStat(stats.shots_per_60, 1)}
             </td>
-            <td class="p-3 text-right font-mono text-gray-400">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.off_zone_percentile)}">
                 ${edge.off_zone_time_pct ? formatStat(edge.off_zone_time_pct, 1) + '%' : '-'}
             </td>
-            <td class="p-3 text-right font-mono text-gray-400">
+            <td class="p-3 text-right font-mono ${getPercentileClass(edge.zone_starts_percentile)}">
                 ${edge.zone_starts_off_pct ? formatStat(edge.zone_starts_off_pct, 1) + '%' : '-'}
             </td>
         </tr>
