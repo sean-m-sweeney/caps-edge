@@ -645,11 +645,8 @@ function setupInfoToggle() {
  * Setup view type toggle (Teams vs Players)
  */
 function setupViewTypeToggle() {
-    console.log('setupViewTypeToggle called. viewTypeEl =', viewTypeEl);
     if (viewTypeEl) {
-        console.log('Adding change event listener to viewTypeEl');
         viewTypeEl.addEventListener('change', async () => {
-            console.log('VIEW DROPDOWN CHANGED! Value:', viewTypeEl.value);
             const viewType = viewTypeEl.value;
 
             if (viewType === 'teams') {
@@ -667,10 +664,6 @@ function setupViewTypeToggle() {
                     updateSortIndicators();
                 }
             } else {
-                // DEBUG: Change page title to verify this code runs
-                document.title = 'DEBUG: Players view activated';
-                console.log('=== SWITCHING TO PLAYERS VIEW ===');
-
                 // Switch to players view - show position toggle
                 positionToggle.classList.remove('hidden');
                 currentView = positionToggle.value || 'forwards';
@@ -679,11 +672,10 @@ function setupViewTypeToggle() {
                 filterState.type = 'league';
                 filterTypeEl.value = 'league';
 
-                // Explicitly hide team dropdown with BOTH methods
+                // Hide team dropdown
                 filterTeamEl.classList.add('hidden');
                 filterTeamEl.style.display = 'none';
                 filterTeamEl.style.visibility = 'hidden';
-                console.log('Team dropdown hidden. classList:', filterTeamEl.classList, 'display:', filterTeamEl.style.display);
 
                 // Update filter dropdowns
                 updateFilterDropdowns();
@@ -696,9 +688,7 @@ function setupViewTypeToggle() {
                 forwards.length = 0;
                 defensemen.length = 0;
                 goalies.length = 0;
-                console.log('About to fetch players with filterState:', JSON.stringify(filterState));
                 await fetchPlayers();
-                console.log('Players fetched. Total forwards:', forwards.length);
             }
         });
     }
@@ -1188,7 +1178,6 @@ function setupFilterHandlers() {
  * Initialize the app
  */
 async function init() {
-    console.log('=== INIT STARTED ===');
     setupSortHandlers();
     setupInfoToggle();
     setupViewTypeToggle();
