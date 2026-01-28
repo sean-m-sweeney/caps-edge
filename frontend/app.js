@@ -28,6 +28,121 @@ let filterState = {
     conference: 'Eastern'
 };
 
+// =============================================================================
+// URL State Management - Shareable URLs
+// =============================================================================
+
+/**
+ * Parse URL query params into state object
+ */
+function parseUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const sortParam = params.get('sort') || '';
+    const [sortField, sortDir] = sortParam.split('-');
+
+    return {
+        view: params.get('view') || 'teams',
+        scope: params.get('scope') || 'league',
+        team: params.get('team') || 'WSH',
+        division: params.get('division') || 'Metropolitan',
+        conference: params.get('conference') || 'Eastern',
+        position: params.get('position') || 'forwards',
+        sortField: sortField || null,
+        sortDir: sortDir || 'desc'
+    };
+}
+
+/**
+ * Update URL from current state (no page reload)
+ */
+function updateUrl() {
+    const params = new URLSearchParams();
+
+    // View type: teams or players
+    params.set('view', currentView === 'teams' ? 'teams' : 'players');
+
+    // Scope/filter type
+    params.set('scope', filterState.type);
+
+    // Scope-specific values
+    if (filterState.type === 'team') params.set('team', filterState.team);
+    if (filterState.type === 'division') params.set('division', filterState.division);
+    if (filterState.type === 'conference') params.set('conference', filterState.conference);
+
+    // Position (only for players view)
+    if (currentView !== 'teams') {
+        params.set('position', currentView);
+    }
+
+    // Sort state
+    let currentSortState;
+    if (currentView === 'teams') {
+        currentSortState = teamsSortState;
+    } else if (currentView === 'goalies') {
+        currentSortState = goalieSortState;
+    } else {
+        currentSortState = sortState;
+    }
+    params.set('sort', `${currentSortState.field}-${currentSortState.direction}`);
+
+    window.history.pushState(null, '', `?${params.toString()}`);
+}
+
+/**
+ * Apply parsed URL state to UI controls and internal state
+ */
+function applyStateToUI(state) {
+    // Set view type dropdown
+    if (viewTypeEl) {
+        viewTypeEl.value = state.view === 'teams' ? 'teams' : 'players';
+    }
+
+    // Set filter type dropdown
+    if (filterTypeEl) {
+        filterTypeEl.value = state.scope;
+    }
+
+    // Set filter state
+    filterState.type = state.scope;
+    filterState.team = state.team;
+    filterState.division = state.division;
+    filterState.conference = state.conference;
+
+    // Set specific filter dropdowns
+    if (filterTeamEl) filterTeamEl.value = state.team;
+    if (filterDivisionEl) filterDivisionEl.value = state.division;
+    if (filterConferenceEl) filterConferenceEl.value = state.conference;
+
+    // Set current view and position toggle
+    if (state.view === 'teams') {
+        currentView = 'teams';
+        if (positionToggle) positionToggle.classList.add('hidden');
+    } else {
+        currentView = state.position;
+        if (positionToggle) {
+            positionToggle.classList.remove('hidden');
+            positionToggle.value = state.position;
+        }
+    }
+
+    // Set sort state from URL
+    if (state.sortField) {
+        if (currentView === 'teams') {
+            teamsSortState.field = state.sortField;
+            teamsSortState.direction = state.sortDir;
+        } else if (currentView === 'goalies') {
+            goalieSortState.field = state.sortField;
+            goalieSortState.direction = state.sortDir;
+        } else {
+            sortState.field = state.sortField;
+            sortState.direction = state.sortDir;
+        }
+    }
+
+    // Update filter dropdown visibility
+    updateFilterDropdowns();
+}
+
 // DOM Elements
 const loadingEl = document.getElementById('loading');
 const tableContainer = document.getElementById('table-container');
@@ -338,6 +453,7 @@ function sortTable(field) {
     }
     renderTable();
     updateSortIndicators();
+    updateUrl();
 }
 
 /**
@@ -625,6 +741,7 @@ function setupTeamClickHandler() {
             goalies.length = 0;
 
             await fetchPlayers();
+            updateUrl();
         });
     }
 }
@@ -690,6 +807,7 @@ function setupViewTypeToggle() {
                 goalies.length = 0;
                 await fetchPlayers();
             }
+            updateUrl();
         });
     }
 }
@@ -726,6 +844,7 @@ function setupPositionToggle() {
 
             renderTable();
             updateSortIndicators();
+            updateUrl();
         });
     }
 }
@@ -1131,7 +1250,7 @@ async function fetchCurrentViewData() {
  * Setup filter event handlers
  */
 function setupFilterHandlers() {
-    filterTypeEl.addEventListener('change', () => {
+    filterTypeEl.addEventListener('change', async () => {
         filterState.type = filterTypeEl.value;
 
         // When switching to team filter, ensure team value is set from dropdown
@@ -1140,10 +1259,11 @@ function setupFilterHandlers() {
         }
 
         updateFilterDropdowns();
-        fetchCurrentViewData();
+        await fetchCurrentViewData();
+        updateUrl();
     });
 
-    filterTeamEl.addEventListener('change', () => {
+    filterTeamEl.addEventListener('change', async () => {
         filterState.team = filterTeamEl.value;
         // If in teams view and selecting a specific team, drill down to players
         if (currentView === 'teams') {
@@ -1156,21 +1276,24 @@ function setupFilterHandlers() {
             forwards.length = 0;
             defensemen.length = 0;
             goalies.length = 0;
-            fetchPlayers();
+            await fetchPlayers();
             renderTeamSpeed();
         } else {
-            fetchCurrentViewData();
+            await fetchCurrentViewData();
         }
+        updateUrl();
     });
 
-    filterDivisionEl.addEventListener('change', () => {
+    filterDivisionEl.addEventListener('change', async () => {
         filterState.division = filterDivisionEl.value;
-        fetchCurrentViewData();
+        await fetchCurrentViewData();
+        updateUrl();
     });
 
-    filterConferenceEl.addEventListener('change', () => {
+    filterConferenceEl.addEventListener('change', async () => {
         filterState.conference = filterConferenceEl.value;
-        fetchCurrentViewData();
+        await fetchCurrentViewData();
+        updateUrl();
     });
 }
 
@@ -1185,22 +1308,70 @@ async function init() {
     setupFilterHandlers();
     setupVirtualScroll();
     setupTeamClickHandler();
-    updateFilterDropdowns();
 
-    // Hide position toggle by default (Teams view is default)
-    if (positionToggle) {
-        positionToggle.classList.add('hidden');
-    }
-
+    // Fetch teams first (needed for team dropdown)
     await fetchTeams();
 
-    // Default to teams view
-    if (currentView === 'teams') {
-        await fetchTeamStats();
-    } else {
-        await fetchPlayers();
+    // Parse URL params and apply to state/UI
+    const urlState = parseUrlParams();
+    applyStateToUI(urlState);
+
+    // Fetch data for the current view
+    await fetchCurrentViewData();
+
+    // Apply sorting from URL state after data is loaded
+    if (urlState.sortField) {
+        if (currentView === 'teams') {
+            sortTeamsArray(teamStats, teamsSortState.field, teamsSortState.direction);
+        } else if (currentView === 'goalies') {
+            sortGoaliesArray(goalies, goalieSortState.field, goalieSortState.direction);
+        } else {
+            const currentPlayers = currentView === 'forwards' ? forwards : defensemen;
+            sortPlayersArray(currentPlayers, sortState.field, sortState.direction);
+        }
+        renderTable();
+        updateSortIndicators();
     }
+
+    // Update URL to normalized form (in case params were missing or invalid)
+    updateUrl();
 }
+
+/**
+ * Handle browser back/forward navigation
+ */
+window.addEventListener('popstate', async () => {
+    const state = parseUrlParams();
+    applyStateToUI(state);
+
+    // Clear data and refetch
+    forwards.length = 0;
+    defensemen.length = 0;
+    goalies.length = 0;
+    teamStats.length = 0;
+
+    await fetchCurrentViewData();
+
+    // Apply sorting from URL state
+    if (state.sortField) {
+        if (currentView === 'teams') {
+            teamsSortState.field = state.sortField;
+            teamsSortState.direction = state.sortDir;
+            sortTeamsArray(teamStats, state.sortField, state.sortDir);
+        } else if (currentView === 'goalies') {
+            goalieSortState.field = state.sortField;
+            goalieSortState.direction = state.sortDir;
+            sortGoaliesArray(goalies, state.sortField, state.sortDir);
+        } else {
+            sortState.field = state.sortField;
+            sortState.direction = state.sortDir;
+            const currentPlayers = currentView === 'forwards' ? forwards : defensemen;
+            sortPlayersArray(currentPlayers, state.sortField, state.sortDir);
+        }
+        renderTable();
+        updateSortIndicators();
+    }
+});
 
 // Start the app
 document.addEventListener('DOMContentLoaded', init);
